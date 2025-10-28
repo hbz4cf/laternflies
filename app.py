@@ -1,0 +1,72 @@
+# minimal_app.py
+from flask import Flask, request, jsonify, render_template
+import os
+from azure.storage.blob import BlobServiceClient, ContentSettings, PublicAccess
+from dotenv import load_dotenv
+from datetime import datetime
+ 
+load_dotenv()
+ 
+# --- super simple config (edit these two lines) ---
+CONNECTION_STRING = os.environ["AZURE_STORAGE_CONNECTION_STRING"]
+print(CONNECTION_STRING)
+
+#CONTAINER_NAME = os.environ.get("IMAGES_CONTAINER", "images-demo")
+ 
+# --- blob client & container (public-read) ---
+#conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+ 
+#bsc = BlobServiceClient.from_connection_string(conn_str)
+#bsc = BlobServiceClient.from_connection_string(DefaultEndpointsProtocol="https;AccountName=case007;AccountKey=YftC3js/nojbH324H/75pDd0RYkncU1nsowOaVDqoKOnHAEKiz//AJ8nR7lSfNl84IGRmGdzxWqG+AStrm+zNA==;EndpointSuffix=core.windows.net")
+#cc  = bsc.get_container_client(CONTAINER_NAME)
+ 
+## Update assignment var
+# Load connection info
+conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+CONTAINER_NAME = os.getenv("IMAGES_CONTAINER", "images-demo")
+ 
+bsc = BlobServiceClient.from_connection_string(conn_str)
+cc = bsc.get_container_client(CONTAINER_NAME)
+ 
+print("✅ Connected to blob storage!")
+print(f"Container: {CONTAINER_NAME}")
+print("Listing blobs...")
+
+for blob in cc.list_blobs():
+    print(f"https://case007.blob.core.windows.net/{CONTAINER_NAME}/{blob.name}")
+ 
+# --- flask app ---
+app = Flask(__name__)
+ 
+@app.get("/")
+def index():
+    return render_template("index.html")
+ 
+# Upload: multipart/form-data with field 'file'
+@app.post("/api/v1/upload")
+def upload():
+    f = request.files.get("file")
+    filename = f.filename
+    print(filename)
+    try:
+        img_blob = f"{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}-{filename}"
+        img_bc = bsc.get_blob_client(CONTAINER_NAME, img_blob)
+        img_bc.upload_blob(f.stream, overwrite=True, content_settings=ContentSettings(content_type="image/jpeg"))
+    except Exception as e:
+        print(e)
+        return jsonify(ok=False, error=str(e)), 500
+    return jsonify(ok=True, url=f"{cc.url}/{f.filename}")
+ 
+# Gallery: return list of public URLs (works because container is public-read)
+@app.get("/api/v1/gallery")
+def gallery():
+    urls = [f"{cc.url}/{b.name}" for b in cc.list_blobs()]
+    return jsonify(ok=True, gallery=urls)
+ 
+# Health: simple 200 if container client is reachable
+@app.get("/api/v1/health")
+def health():
+    return jsonify(ok=True, container=cc.container_name)
+ 
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
