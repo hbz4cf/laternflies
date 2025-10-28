@@ -13,12 +13,7 @@ print(CONNECTION_STRING)
 
 #CONTAINER_NAME = os.environ.get("IMAGES_CONTAINER", "images-demo")
  
-# --- blob client & container (public-read) ---
-#conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
- 
-#bsc = BlobServiceClient.from_connection_string(conn_str)
-#bsc = BlobServiceClient.from_connection_string(DefaultEndpointsProtocol="https;AccountName=case007;AccountKey=YftC3js/nojbH324H/75pDd0RYkncU1nsowOaVDqoKOnHAEKiz//AJ8nR7lSfNl84IGRmGdzxWqG+AStrm+zNA==;EndpointSuffix=core.windows.net")
-#cc  = bsc.get_container_client(CONTAINER_NAME)
+# --- blob client & container (public-read) --
  
 ## Update assignment var
 # Load connection info
